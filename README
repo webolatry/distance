@@ -1,0 +1,12 @@
+A simple project illustrating the use of the ArcGIS REST API to compute a distance between two points, obtained from the device's GPS service.
+
+The UI presents 4 output fields and 4 buttons. The output fields are read-only, point coordinates cannot be typed in. They are only specified using the GPS and set using the buttons next to the fields.
+
+The first line displays the GPS status. The button to the right displays the GPS settings.
+
+The second line displays the first point coordinates. The button to the right set the point value to the current GPS coordinates.
+
+The third line displays the second point coordinates. The button to the right set the point value to the current GPS coordinates.
+
+And the fourth line displays the computed distance. The button to the right calls the ArcGIS service.
+
