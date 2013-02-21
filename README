@@ -4,9 +4,9 @@ The UI presents 4 output fields and 4 buttons. The output fields are read-only, 
 
 The first line displays the GPS status. The button to the right displays the GPS settings.
 
-The second line displays the first point coordinates. The button to the right set the point value to the current GPS coordinates.
+The second line displays the first point coordinates. The button to the right sets the point value to the current GPS coordinates.
 
-The third line displays the second point coordinates. The button to the right set the point value to the current GPS coordinates.
+The third line displays the second point coordinates. The button to the right sets the point value to the current GPS coordinates.
 
 And the fourth line displays the computed distance. The button to the right calls the ArcGIS service.
 
