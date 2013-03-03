@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
+/*
+ * Code style - following Android standards 
+ */
+
 package com.webolatry.distance;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -46,17 +51,17 @@ import com.webolatry.distance.service.Service;
 import com.webolatry.distance.service.ServiceException;
 
 /**
- * Android activity with controls for obtaining two gps positions 
- * and calling a service to compute the distance between those points
+ * Android activity with controls for obtaining two gps positions and calling a
+ * service to compute the distance between those points
  * 
  * @author Tom
- *
+ * 
  */
 public class DistanceActivity extends Activity implements LocationListener {
 
 	/** the Android gps service */
 	private LocationManager mLocationManager;
-	
+
 	/** output for gps status */
 	private TextView mEditStatus;
 	/** output for the start location */
@@ -65,10 +70,10 @@ public class DistanceActivity extends Activity implements LocationListener {
 	private TextView mEditPoint2;
 	/** output for the computed distance */
 	private TextView mEditDistance;
-	
+
 	/** current running get-distance task */
 	private DistanceTask mTask;
-	
+
 	/** current location from gps */
 	private Point mGPSPoint;
 	/** user-set start location */
@@ -82,8 +87,7 @@ public class DistanceActivity extends Activity implements LocationListener {
 	private static final String STATE_POINT2 = "STATE_POINT2";
 
 	/**
-	 * Called when the activity is starting
-	 * (Activity override)
+	 * Called when the activity is starting (Activity override)
 	 */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -97,25 +101,59 @@ public class DistanceActivity extends Activity implements LocationListener {
 		mEditPoint2 = (TextView) findViewById(R.id.editPoint2);
 		mEditDistance = (TextView) findViewById(R.id.editDistance);
 
+		/*
+		 * if an error occurs restoring the point state, display a message
+		 */
+		boolean error = false;
+
 		/* restore the saved point1, if available */
-		mPoint1 = restorePointState(STATE_POINT1);
-		if (mPoint1 != null)
-			mEditPoint1.setText(formatPoint(mPoint1));
+		try {
+			mPoint1 = restorePointState(STATE_POINT1);
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = true;
+		}
 
 		/* restore the saved point2, if available */
-		mPoint2 = restorePointState(STATE_POINT2);
-		if (mPoint2 != null)
-			mEditPoint2.setText(formatPoint(mPoint2));
+		try {
+			mPoint2 = restorePointState(STATE_POINT2);
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = true;
+		}
 
+		if (error) {
+			/* if one point failed, consider both bad */
+			mPoint1 = null;
+			mPoint2 = null;
+			showMessage(
+					"An error occurred restoring saved start and end locations",
+					"Error");
+		}
+
+		/* populate UI with restored point values */
+		if (mPoint1 != null) {
+			mEditPoint1.setText(formatPoint(mPoint1));
+		} else {
+			mEditPoint1.setText("");
+		}
+		
+		if (mPoint2 != null) {
+			mEditPoint2.setText(formatPoint(mPoint2));
+		} else {
+			mEditPoint2.setText("");
+		}
+		
 		/* get the gps service */
 		mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
 		/* set the initial gps status message */
-		if (mLocationManager != null)
+		if (mLocationManager != null) {
 			mEditStatus.setText("Waiting for GPS");
-		else
+		} else {
 			mEditStatus.setText("GPS Not Supported");
-
+		}
+		
 		/* button handler - gps settings */
 		ImageButton buttonStatus = (ImageButton) findViewById(R.id.buttonStatus);
 		buttonStatus.setOnClickListener(new View.OnClickListener() {
@@ -174,18 +212,19 @@ public class DistanceActivity extends Activity implements LocationListener {
 				} else {
 
 					if (mPoint1.x == mPoint2.x && mPoint1.y == mPoint2.y) {
-						
-						/* if the two points are the same, don't bother
+
+						/*
+						 * if the two points are the same, don't bother
 						 * requesting the distance from the service
 						 */
 						distanceComputed(0.0);
-						
+
 					} else {
-						
+
 						/* cancel any running task */
 						if (mTask != null)
 							mTask.cancel(true);
-						
+
 						/* start async task to obtain distance from server */
 						mTask = new DistanceTask(mPoint1, mPoint2);
 						mTask.execute();
@@ -196,26 +235,33 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Perform any final cleanup before an activity is destroyed.
-	 * (Activity override)
+	 * Perform any final cleanup before an activity is destroyed. (Activity
+	 * override)
 	 */
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 
 		/* save the user established points, to be restored in onCreate */
-		savePointState(mPoint1, STATE_POINT1);
-		savePointState(mPoint2, STATE_POINT2);
-		
+		try {
+			savePointState(mPoint1, STATE_POINT1);
+			savePointState(mPoint2, STATE_POINT2);
+		} catch (IOException e) {
+			e.printStackTrace();
+			/* showing an alert won't work here, the activity is closing
+			 * TODO some other way to inform the user of problems
+			 * saving point state
+			 */
+		}
+
 		/* cancel any running task, otherwise the wait dialog becomes orphaned */
 		if (mTask != null)
 			mTask.cancel(true);
 	}
 
 	/**
-	 * Called after onRestoreInstanceState(Bundle), onRestart(), or onPause(), 
-	 * for your activity to start interacting with the user.
-	 * (Activity override)
+	 * Called after onRestoreInstanceState(Bundle), onRestart(), or onPause(),
+	 * for your activity to start interacting with the user. (Activity override)
 	 */
 	@Override
 	protected void onResume() {
@@ -234,9 +280,8 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called as part of the activity lifecycle when an activity is going 
-	 * into the background, but has not (yet) been killed.
-	 * (Activity override)
+	 * Called as part of the activity lifecycle when an activity is going into
+	 * the background, but has not (yet) been killed. (Activity override)
 	 */
 	@Override
 	protected void onPause() {
@@ -249,8 +294,7 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called when the location has changed.
-	 * (LocationListener implementation)
+	 * Called when the location has changed. (LocationListener implementation)
 	 */
 	public void onLocationChanged(Location location) {
 
@@ -259,8 +303,8 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called when the provider is disabled by the user.
-	 * (LocationListener implementation)
+	 * Called when the provider is disabled by the user. (LocationListener
+	 * implementation)
 	 */
 	public void onProviderDisabled(String provider) {
 
@@ -269,8 +313,8 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called when the provider is enabled by the user
-	 * (LocationListener implementation)
+	 * Called when the provider is enabled by the user (LocationListener
+	 * implementation)
 	 */
 	public void onProviderEnabled(String provider) {
 
@@ -279,8 +323,8 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called when the provider status changes.
-	 * (LocationListener implementation)
+	 * Called when the provider status changes. (LocationListener
+	 * implementation)
 	 */
 	public void onStatusChanged(String provider, int status, Bundle extras) {
 
@@ -303,7 +347,8 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called by the compute-distance-task when the distance has been successfully computed
+	 * Called by the compute-distance-task when the distance has been
+	 * successfully computed
 	 */
 	private void distanceComputed(double distance) {
 
@@ -331,15 +376,23 @@ public class DistanceActivity extends Activity implements LocationListener {
 	}
 
 	/**
-	 * Called by the compute-distance-task when the distance fails to compute, either
-	 * due to an error, user-cancel, or programmatic cancel (orientation changes)
+	 * Called by the compute-distance-task when the distance fails to compute,
+	 * either due to an error, user-cancel, or programmatic cancel (orientation
+	 * changes)
+	 * @param errorMessage 
 	 */
-	private void distanceFailedToCompute() {
-		mEditDistance.setText("");
+	private void distanceFailedToCompute(String errorMessage) {
+		
+		if (errorMessage != null) {
+			mEditDistance.setText(errorMessage);
+		} else {
+			mEditDistance.setText("");
+		}
 	}
 
 	/**
 	 * Format the geographic point for output
+	 * 
 	 * @param point the point to format
 	 * @return a string with degrees-minutes-seconds
 	 */
@@ -347,11 +400,12 @@ public class DistanceActivity extends Activity implements LocationListener {
 
 		StringBuilder sb = new StringBuilder(32);
 
-		if (point.y >= 0.0)
+		if (point.y >= 0.0) {
 			sb.append("N ");
-		else
+		} else {
 			sb.append("S ");
-
+		}
+		
 		double remainder = Math.abs(point.y);
 		int degrees = (int) Math.abs(point.y);
 		remainder = (remainder - degrees) * 60.0;
@@ -366,11 +420,12 @@ public class DistanceActivity extends Activity implements LocationListener {
 		sb.append(Integer.toString(seconds));
 		sb.append("\", ");
 
-		if (point.x >= 0.0)
+		if (point.x >= 0.0) {
 			sb.append("E ");
-		else
+		} else {
 			sb.append("W ");
-
+		}
+		
 		remainder = Math.abs(point.x);
 		degrees = (int) remainder;
 		remainder = (remainder - degrees) * 60.0;
@@ -390,10 +445,12 @@ public class DistanceActivity extends Activity implements LocationListener {
 
 	/**
 	 * Saves the point data to restore between Activity lifecycles
+	 * 
 	 * @param point the data to save
-	 * @param name identifier for persistence data
+	 * @param name  identifier for persistence data
+	 * @throws IOException 
 	 */
-	private void savePointState(Point point, String name) {
+	private void savePointState(Point point, String name) throws IOException {
 
 		/* remove any existing saved state */
 		deleteFile(name);
@@ -409,20 +466,22 @@ public class DistanceActivity extends Activity implements LocationListener {
 				dos.writeDouble(point.x);
 				dos.writeDouble(point.y);
 
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
 			} catch (IOException e) {
+				/* problem unknown */
 				e.printStackTrace();
+				throw e;
 			}
 		}
 	}
 
 	/**
 	 * Loads and returns the saved point data
+	 * 
 	 * @param name identifier for persistence data
 	 * @return the saved point data
+	 * @throws IOException
 	 */
-	private Point restorePointState(String name) {
+	private Point restorePointState(String name) throws IOException {
 
 		try {
 
@@ -437,14 +496,32 @@ public class DistanceActivity extends Activity implements LocationListener {
 			return new Point(x, y);
 
 		} catch (FileNotFoundException e) {
-		} catch (IOException e) {
-		}
+			/* most likely the point state has not yet been saved, swallow this exception */
+			e.printStackTrace();
+			return null;
 
-		return null;
+		} catch (IOException e) {
+			/* unexpected error, the persisted point data could be corrupted */
+			e.printStackTrace();
+			throw e;
+		}
+	}
+
+	private void showMessage(String message, String title) {
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(title).setMessage(message).setCancelable(true)
+				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int id) {
+					}
+				});
+		AlertDialog alert = builder.create();
+		alert.show();
 	}
 
 	/**
 	 * Computes the distance between two points in a background thread.
+	 * 
 	 * @author Tom
 	 * 
 	 */
@@ -458,9 +535,12 @@ public class DistanceActivity extends Activity implements LocationListener {
 		private Point mPoint1;
 		/** the end location */
 		private Point mPoint2;
+		/** error message from service */
+		private String mErrorMessage;
 
 		/**
 		 * constructor
+		 * 
 		 * @param point1
 		 * @param point2
 		 */
@@ -484,13 +564,22 @@ public class DistanceActivity extends Activity implements LocationListener {
 
 			} catch (ServiceException e) {
 
+				/* return used for success/fail and value of success, 
+				 * any error captured in string
+				 */
+	            Throwable cause = e.getCause();
+	            if (cause != null)
+	            	mErrorMessage = cause.getMessage();
+	            else
+	            	mErrorMessage = e.getMessage();
+	            
 				return null;
 			}
 		}
 
 		/**
-		 * Displays the modal wait dialog for the entire duration
-		 * of the task. Runs on the UI thread before doInBackground.
+		 * Displays the modal wait dialog for the entire duration of the task.
+		 * Runs on the UI thread before doInBackground.
 		 */
 		@Override
 		protected void onPreExecute() {
@@ -500,14 +589,12 @@ public class DistanceActivity extends Activity implements LocationListener {
 					"Please wait...", "Computing Distance...", true, true);
 
 			/* Set a listener to be invoked when the dialog is dismissed */
-			waitDialog
-			.setOnCancelListener(new OnCancelListener()
-			{
+			waitDialog.setOnCancelListener(new OnCancelListener() {
 				/**
 				 * This method is invoked when the dialog is canceled.
 				 */
 				public void onCancel(DialogInterface dialog) {
-					
+
 					DistanceTask.this.cancel(true);
 				}
 			});
@@ -518,10 +605,9 @@ public class DistanceActivity extends Activity implements LocationListener {
 		 */
 		@Override
 		protected void onPostExecute(Double result) {
-			
+
 			/* close the wait dialog */
-			runOnUiThread(new Runnable() 
-			{
+			runOnUiThread(new Runnable() {
 				// @Override
 				public void run() {
 					if (waitDialog != null) {
@@ -532,20 +618,21 @@ public class DistanceActivity extends Activity implements LocationListener {
 			});
 
 			/* send result to activity/UI */
-			if (result == null)
-				distanceFailedToCompute();
-			else
+			if (result == null) {
+				distanceFailedToCompute(mErrorMessage);
+			} else {
 				distanceComputed(result);
+			}
 		}
 
 		/**
-		 * Runs on the UI thread after cancel(boolean) is invoked 
-		 * and doInBackground(Object[]) has finished.
+		 * Runs on the UI thread after cancel(boolean) is invoked and
+		 * doInBackground(Object[]) has finished.
 		 */
 		@Override
-		protected void onCancelled () {
-			
-			distanceFailedToCompute();
+		protected void onCancelled() {
+
+			distanceFailedToCompute(null);
 		}
 	}
 }

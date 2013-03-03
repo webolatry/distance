@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/*
+ * Code style - following Android standards 
+ */
+
 package com.webolatry.distance.service;
 
 import java.io.IOException;
@@ -130,12 +134,14 @@ public class Service {
 
 			int status = getResponse.getStatusLine().getStatusCode();
 						
-			if (status != HttpStatus.SC_OK)
+			if (status != HttpStatus.SC_OK) {
 				throw new ServiceException(getResponse.getStatusLine().getReasonPhrase());
+			}
 
 			HttpEntity getResponseEntity = getResponse.getEntity();
-			if (getResponseEntity == null)
+			if (getResponseEntity == null) {
 				throw new ServiceException("The server did not respond");
+			}
 
 			return getResponseEntity.getContent();
 

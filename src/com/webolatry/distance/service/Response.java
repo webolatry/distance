@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/*
+ * Code style - following Android standards 
+ */
+
 package com.webolatry.distance.service;
 
 import com.google.gson.annotations.SerializedName;
